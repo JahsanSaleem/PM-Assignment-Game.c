@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <stdlib.h>
+
 
 #define MIN_N 5
 #define MAX_N 15
@@ -17,8 +19,8 @@
             return NULL;
         }
     }
- }
-    return g;
+   return g;
+}
 
     void freeGrid(char **g, int n) {
     for (int i = 0; i < n; i++) free(g[i]);
