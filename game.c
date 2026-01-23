@@ -3,10 +3,12 @@
 #include <time.h>
 
 
+
 #define MIN_N 5
 #define MAX_N 15
 #define EMPTY '.'
 #define EXTRACT 'X'
+#define PLAYER '@'
 
 
 char **allocGrid(int n) {
@@ -35,6 +37,10 @@ void fillGrid(char **g, int n, char ch) {
       
 }
 
+
+
+
+
 void placeExtraction(char **g, int n) {
     int r, c;
     do {
@@ -45,7 +51,20 @@ void placeExtraction(char **g, int n) {
     g[r][c] = EXTRACT;
 }
 
- int main(){
+void placePlayer(char **g, int n, int *pr, int *pc) {
+    int r, c;
+    do {
+        r = rand() % n;
+        c = rand() % n;
+    } while (g[r][c] != EMPTY);
+
+    *pr = r;
+    *pc = c;
+}
+
+ 
+
+int main(){
 
     srand(time(NULL));
 
@@ -53,18 +72,31 @@ void placeExtraction(char **g, int n) {
     printf("Enter the grid size (5 <= N <= 15):  ");
     scanf("%d", &n);
 
-    char **grid = allocGrid(n);
 
+    int pr, pc;
+
+   
+
+   char **grid = allocGrid(n);
    fillGrid(grid, n, EMPTY);
+
    placeExtraction(grid, n);
+   placePlayer(grid, n, &pr, &pc);
 
     
     for (int j = 0; j < n; j++) printf(" __");
     printf("\n");
 
     for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n; j++) printf("|%c ", grid[i][j]);
-        printf("|\n");
+        for (int j = 0; j < n; j++) {
+    if (i == pr && j == pc) 
+    
+         printf("|%c ", PLAYER);
+    
+    else printf("|%c ", grid[i][j]);
+}
+       
+       printf("|\n");
 
         for (int j = 0; j < n; j++) printf("|__");
         printf("|\n");
