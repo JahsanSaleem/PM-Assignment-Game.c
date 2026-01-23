@@ -1,13 +1,15 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 
 #define MIN_N 5
 #define MAX_N 15
 #define EMPTY '.'
+#define EXTRACT 'X'
 
 
- char **allocGrid(int n) {
+char **allocGrid(int n) {
     char **g = (char **)malloc(n * sizeof(char *));
     if (g == NULL) return NULL;
 
@@ -21,19 +23,31 @@
     }
    return g;
 }
-
-    void freeGrid(char **g, int n) {
+void freeGrid(char **g, int n) {
     for (int i = 0; i < n; i++) free(g[i]);
     free(g);
-    }
+}
 
-    void fillGrid(char **g, int n, char ch) {
+void fillGrid(char **g, int n, char ch) {
     for (int i = 0; i < n; i++)
         for (int j = 0; j < n; j++)
             g[i][j] = ch;
-    }
+      
+}
 
-  int main(){
+void placeExtraction(char **g, int n) {
+    int r, c;
+    do {
+        r = rand() % n;
+        c = rand() % n;
+    } while (g[r][c] != EMPTY);
+
+    g[r][c] = EXTRACT;
+}
+
+ int main(){
+
+    srand(time(NULL));
 
     int n;
     printf("Enter the grid size (5 <= N <= 15):  ");
@@ -41,8 +55,8 @@
 
     char **grid = allocGrid(n);
 
-
-     fillGrid(grid, n, EMPTY);
+   fillGrid(grid, n, EMPTY);
+   placeExtraction(grid, n);
 
     
     for (int j = 0; j < n; j++) printf(" __");
