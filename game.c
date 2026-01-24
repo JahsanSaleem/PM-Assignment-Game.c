@@ -11,6 +11,7 @@
 #define PLAYER '@'
 #define WALL '#'
 #define INTEL 'I'
+#define LIFE 'L'
 
 
 char **allocGrid(int n) {
@@ -94,6 +95,20 @@ void placeIntel(char **g, int n) {
     }
 }
 
+void placeLives(char **g, int n) {
+    int placed = 0;
+
+    while (placed < 2) {
+        int r = rand() % n;
+        int c = rand() % n;
+
+        if (g[r][c] == EMPTY) {
+            g[r][c] = LIFE;
+            placed++;
+        }
+    }
+}
+
  
 
 int main(){
@@ -111,11 +126,12 @@ int main(){
 
    char **grid = allocGrid(n);
    
-fillGrid(grid, n, EMPTY);
-placeWalls(grid, n);
-placeIntel(grid, n);
-placeExtraction(grid, n);
-placePlayer(grid, n, &pr, &pc);
+   fillGrid(grid, n, EMPTY);
+   placeWalls(grid, n);
+   placeIntel(grid, n);
+   placeLives(grid, n);
+   placeExtraction(grid, n);
+   placePlayer(grid, n, &pr, &pc);
     
     for (int j = 0; j < n; j++) printf(" __");
     printf("\n");
