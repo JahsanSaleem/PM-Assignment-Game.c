@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <ctype.h>
+#include <string.h>
 
 
 
@@ -127,14 +128,35 @@ void loseLife(int *lives) {
     printf("Invalid move! Lives -1 (Lives now: %d)\n", *lives);
 }
 
+
+
+
+
+void logState(FILE *fp, char **grid, int n, int pr, int pc, int lives, int intel, char move, const char *note) {
+    fprintf(fp, "Move: %c | %s\n", move, note);
+    fprintf(fp, "Lives: %d | Intel: %d\n", lives, intel);
+
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            if (i == pr && j == pc) fputc(PLAYER, fp);
+            else fputc(grid[i][j], fp);
+            fputc(' ', fp);
+        }
+        fputc('\n', fp);
+    }
+    fprintf(fp, "----------------------------\n");
+}
+
  
 
 int main(){
 
     srand(time(NULL));
 
+   printf("===Welcome to SpyNet-The Codebreaker Protocol====\n");
+
     int n;
-    printf("Enter the grid size (5 <= N <= 15):  ");
+    printf("\nEnter the grid size (5 <= N <= 15):  ");
     scanf("%d", &n);
 
 
@@ -143,6 +165,13 @@ int main(){
    
 
    char **grid = allocGrid(n);
+
+   FILE *logfp = fopen("spynet_log1.txt", "w");
+  if (logfp == NULL) {
+    printf("Could not open log file.\n");
+    freeGrid(grid, n);
+    return 1;
+}
    
    fillGrid(grid, n, EMPTY);
    placeWalls(grid, n);
@@ -153,6 +182,8 @@ int main(){
 
    int lives = 3;
    int intel = 0;
+
+   logState(logfp, grid, n, pr, pc, lives, intel, '-', "Initial state");
     
     while (1) {
 
@@ -179,13 +210,20 @@ int main(){
 
     if (move == 'Q') {
         printf("You quit.\n");
+       
+        logState(logfp, grid, n, pr, pc, lives, intel, move, "Quit");
         break;
     }
 
     int dr, dc;
     if (!getMoveDelta(move, &dr, &dc)) {
         loseLife(&lives);
-        if (lives <= 0) { printf("Game Over! Lives reached 0.\n"); break; }
+        if (lives <= 0) { printf("Game Over! Lives reached 0.\n");
+            
+            
+        logState(logfp, grid, n, pr, pc, lives, intel, move, "Invalid key");
+
+            break; }
         continue;
     }
 
@@ -194,13 +232,19 @@ int main(){
 
     if (nr < 0 || nr >= n || nc < 0 || nc >= n) {
         loseLife(&lives);
-        if (lives <= 0) { printf("Game Over! Lives reached 0.\n"); break; }
+        if (lives <= 0) { printf("Game Over! Lives reached 0.\n"); 
+            
+            logState(logfp, grid, n, pr, pc, lives, intel, move, "Outside grid");
+            break; }
         continue;
     }
 
     if (grid[nr][nc] == WALL) {
         loseLife(&lives);
-        if (lives <= 0) { printf("Game Over! Lives reached 0.\n"); break; }
+        if (lives <= 0) { printf("Game Over! Lives reached 0.\n");
+            
+            logState(logfp, grid, n, pr, pc, lives, intel, move, "Hit wall");
+            break; }
         continue;
     }
 
@@ -219,9 +263,13 @@ else if (grid[nr][nc] == LIFE) {
   // If next cell is extraction point
 if (grid[nr][nc] == EXTRACT) {
     if (intel == 3) {
-        printf("🎉 YOU WIN! Extracted with all intel.\n");
+        printf("YOU WIN! Extracted with all intel.\n");
+
+        logState(logfp, grid, n, pr, pc, lives, intel, move, "Reached extraction (win)");
     } else {
         printf("YOU LOST! Reached extraction without all intel.\n");
+
+        logState(logfp, grid, n, pr, pc, lives, intel, move, "Reached extraction (loss)");
     }
     break; // end game
 }
@@ -229,8 +277,10 @@ if (grid[nr][nc] == EXTRACT) {
    // move player
     pr = nr;
     pc = nc;
+    logState(logfp, grid, n, pr, pc, lives, intel, move, "Valid move");
 }
 
+ fclose(logfp);
 freeGrid(grid, n);
 return 0;
 }
