@@ -9,6 +9,7 @@
 #define EMPTY '.'
 #define EXTRACT 'X'
 #define PLAYER '@'
+#define WALL '#'
 
 
 char **allocGrid(int n) {
@@ -62,6 +63,22 @@ void placePlayer(char **g, int n, int *pr, int *pc) {
     *pc = c;
 }
 
+void placeWalls(char **g, int n) {
+    int wallCount = (n * n) / 7;   // ~15% of the grid
+    if (wallCount < 5) wallCount = 5;
+
+    int placed = 0;
+    while (placed < wallCount) {
+        int r = rand() % n;
+        int c = rand() % n;
+
+        if (g[r][c] == EMPTY) {
+            g[r][c] = WALL;
+            placed++;
+        }
+    }
+}
+
  
 
 int main(){
@@ -80,8 +97,10 @@ int main(){
    char **grid = allocGrid(n);
    fillGrid(grid, n, EMPTY);
 
+   
    placeExtraction(grid, n);
    placePlayer(grid, n, &pr, &pc);
+   placeWalls(grid, n);
 
     
     for (int j = 0; j < n; j++) printf(" __");
