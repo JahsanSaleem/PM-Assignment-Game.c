@@ -95,13 +95,11 @@ int main(){
    
 
    char **grid = allocGrid(n);
-   fillGrid(grid, n, EMPTY);
 
-   
+   fillGrid(grid, n, EMPTY);
+   placeWalls(grid, n);
    placeExtraction(grid, n);
    placePlayer(grid, n, &pr, &pc);
-   placeWalls(grid, n);
-
     
     for (int j = 0; j < n; j++) printf(" __");
     printf("\n");
