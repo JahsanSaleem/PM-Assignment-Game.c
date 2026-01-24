@@ -124,7 +124,7 @@ int getMoveDelta(char move, int *dr, int *dc) {
 
 void loseLife(int *lives) {
     (*lives)--;
-    printf("❗ Invalid move! Lives -1 (Lives now: %d)\n", *lives);
+    printf("Invalid move! Lives -1 (Lives now: %d)\n", *lives);
 }
 
  
@@ -204,7 +204,29 @@ int main(){
         continue;
     }
 
-    // valid move
+    // valid move: check what is on the target cell
+if (grid[nr][nc] == INTEL) {
+    intel++;
+    grid[nr][nc] = EMPTY;   // remove collected intel
+    printf("Collected Intel! Intel now: %d\n", intel);
+}
+else if (grid[nr][nc] == LIFE) {
+    lives++;
+    grid[nr][nc] = EMPTY;   // remove collected life pack
+    printf("Collected Life! Lives now: %d\n", lives);
+}
+
+  // If next cell is extraction point
+if (grid[nr][nc] == EXTRACT) {
+    if (intel == 3) {
+        printf("🎉 YOU WIN! Extracted with all intel.\n");
+    } else {
+        printf("YOU LOST! Reached extraction without all intel.\n");
+    }
+    break; // end game
+}
+
+   // move player
     pr = nr;
     pc = nc;
 }
