@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <ctype.h>
 
 
 
@@ -109,6 +110,23 @@ void placeLives(char **g, int n) {
     }
 }
 
+int getMoveDelta(char move, int *dr, int *dc) {
+    *dr = 0;
+    *dc = 0;
+
+    if (move == 'W') { *dr = -1; return 1; }
+    if (move == 'S') { *dr =  1; return 1; }
+    if (move == 'A') { *dc = -1; return 1; }
+    if (move == 'D') { *dc =  1; return 1; }
+
+    return 0;
+}
+
+void loseLife(int *lives) {
+    (*lives)--;
+    printf("❗ Invalid move! Lives -1 (Lives now: %d)\n", *lives);
+}
+
  
 
 int main(){
@@ -132,27 +150,65 @@ int main(){
    placeLives(grid, n);
    placeExtraction(grid, n);
    placePlayer(grid, n, &pr, &pc);
+
+   int lives = 3;
+   int intel = 0;
     
+    while (1) {
+
+    printf("\nLives: %d | Intel: %d\n", lives, intel);
+
     for (int j = 0; j < n; j++) printf(" __");
     printf("\n");
 
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < n; j++) {
-    if (i == pr && j == pc) 
-    
-         printf("|%c ", PLAYER);
-    
-    else printf("|%c ", grid[i][j]);
-}
-       
-       printf("|\n");
+            if (i == pr && j == pc) printf("|%c ", PLAYER);
+            else printf("|%c ", grid[i][j]);
+        }
+        printf("|\n");
 
         for (int j = 0; j < n; j++) printf("|__");
         printf("|\n");
     }
 
-    
-             
-       freeGrid(grid,n);
- return 0;
+    char move;
+    printf("\nMove (W/A/S/D) or Q to quit: ");
+    scanf(" %c", &move);
+    move = toupper((unsigned char)move);
+
+    if (move == 'Q') {
+        printf("You quit.\n");
+        break;
+    }
+
+    int dr, dc;
+    if (!getMoveDelta(move, &dr, &dc)) {
+        loseLife(&lives);
+        if (lives <= 0) { printf("Game Over! Lives reached 0.\n"); break; }
+        continue;
+    }
+
+    int nr = pr + dr;
+    int nc = pc + dc;
+
+    if (nr < 0 || nr >= n || nc < 0 || nc >= n) {
+        loseLife(&lives);
+        if (lives <= 0) { printf("Game Over! Lives reached 0.\n"); break; }
+        continue;
+    }
+
+    if (grid[nr][nc] == WALL) {
+        loseLife(&lives);
+        if (lives <= 0) { printf("Game Over! Lives reached 0.\n"); break; }
+        continue;
+    }
+
+    // valid move
+    pr = nr;
+    pc = nc;
+}
+
+freeGrid(grid, n);
+return 0;
 }
