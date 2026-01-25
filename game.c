@@ -154,9 +154,13 @@ int getMoveDelta(char move, int *dr, int *dc) {
     return 0;
 }
 
-void loseLife(int *lives) {
-    (*lives)--;
-    printf("Invalid move! Lives -1 (Lives now: %d)\n", *lives);
+void loseLife(Player *p) {
+    p->lives--;
+    printf("Invalid move! Lives -1 (Lives now: %d)\n", p->lives);
+    if (p->lives <= 0) {
+        p->active = 0;
+        printf("Player %c became inactive (lives reached 0).\n", p->symbol);
+    }
 }
 
 
@@ -210,14 +214,19 @@ int main(){
     placePlayer(grid, n, &p2.r, &p2.c);
     grid[p.r][p.c] = saved;     // restore cell
 
-   int lives = 3;
-   int intel = 0;
+   // Turn system helpers
 
    logState(logfp, grid, n, &p, &p2, '-', "Initial state");
     
+    int currentIndex = 0; // 0 => p (@), 1 => p2 (&)
+    Player *current = &p;
+    Player *other = &p2;
+
     while (1) {
 
-    printf("\nLives: %d | Intel: %d\n", lives, intel);
+    printf("\nTurn: Player %c\n", current->symbol);
+    printf("P1(%c) Lives: %d | Intel: %d | Active: %d\n", p.symbol, p.lives, p.intel, p.active);
+    printf("P2(%c) Lives: %d | Intel: %d | Active: %d\n", p2.symbol, p2.lives, p2.intel, p2.active);
 
     for (int j = 0; j < n; j++) printf(" __");
     printf("\n");
@@ -240,75 +249,110 @@ int main(){
     move = toupper((unsigned char)move);
 
     if (move == 'Q') {
-        printf("You quit.\n");
-       
-        logState(logfp, grid, n, &p, &p2, move, "Quit");
+        printf("Player %c quit and became inactive.\n", current->symbol);
+        current->active = 0;
+        logState(logfp, grid, n, &p, &p2, move, "Quit (current player inactive)");
+    }
+
+    // Auto-win if only one active player remains
+    if (p.active + p2.active == 1) {
+        Player *winner = p.active ? &p : &p2;
+        printf("Player %c wins (only active player remaining).\n", winner->symbol);
+        logState(logfp, grid, n, &p, &p2, '-', "Auto-win: only one active player");
         break;
+    }
+
+    // If current player became inactive (e.g., quit), advance turn
+    if (!current->active) {
+        currentIndex = 1 - currentIndex;
+        current = (currentIndex == 0) ? &p : &p2;
+        other   = (currentIndex == 0) ? &p2 : &p;
+        continue;
     }
 
     int dr, dc;
     if (!getMoveDelta(move, &dr, &dc)) {
-        loseLife(&lives);
-        if (lives <= 0) { printf("Game Over! Lives reached 0.\n");
-            
-            
+        loseLife(current);
         logState(logfp, grid, n, &p, &p2, move, "Invalid key");
-
-            break; }
-        continue;
+        if (!current->active) {
+            // inactive due to lives reaching 0
+        }
+        // advance turn at end of loop
+        goto ADVANCE_TURN;
     }
 
-   int nr = p.r + dr;
-   int nc = p.c + dc;
+   int nr = current->r + dr;
+   int nc = current->c + dc;
 
     if (nr < 0 || nr >= n || nc < 0 || nc >= n) {
-        loseLife(&lives);
-        if (lives <= 0) { printf("Game Over! Lives reached 0.\n"); 
-            
-            logState(logfp, grid, n, &p, &p2, move, "Outside grid");
-            break; }
-        continue;
+        loseLife(current);
+        logState(logfp, grid, n, &p, &p2, move, "Outside grid");
+        goto ADVANCE_TURN;
     }
 
     if (grid[nr][nc] == WALL) {
-        loseLife(&lives);
-        if (lives <= 0) { printf("Game Over! Lives reached 0.\n");
-            
-            logState(logfp, grid, n, &p, &p2, move, "Hit Wall");
-            break; }
-        continue;
+        loseLife(current);
+        logState(logfp, grid, n, &p, &p2, move, "Hit Wall");
+        goto ADVANCE_TURN;
+    }
+
+    if (nr == other->r && nc == other->c && other->active) {
+        loseLife(current);
+        logState(logfp, grid, n, &p, &p2, move, "Tried to move onto other player");
+        goto ADVANCE_TURN;
     }
 
     // valid move: check what is on the target cell
 if (grid[nr][nc] == INTEL) {
-    intel++;
-    grid[nr][nc] = EMPTY;   // remove collected intel
-    printf("Collected Intel! Intel now: %d\n", intel);
+    current->intel++;
+    grid[nr][nc] = EMPTY;
+    printf("Player %c collected Intel. Intel now: %d\n", current->symbol, current->intel);
 }
 else if (grid[nr][nc] == LIFE) {
-    lives++;
-    grid[nr][nc] = EMPTY;   // remove collected life pack
-    printf("Collected Life! Lives now: %d\n", lives);
+    current->lives++;
+    grid[nr][nc] = EMPTY;
+    printf("Player %c collected Life. Lives now: %d\n", current->symbol, current->lives);
 }
 
   // If next cell is extraction point
 if (grid[nr][nc] == EXTRACT) {
-    if (intel == 3) {
-        printf("YOU WIN! Extracted with all intel.\n");
-
+    if (current->intel == 3) {
+        printf("Player %c wins by extracting with all intel.\n", current->symbol);
         logState(logfp, grid, n, &p, &p2, move, "Reached extraction (win)");
+        break;
     } else {
-        printf("YOU LOST! Reached extraction without all intel.\n");
-
-        logState(logfp, grid, n, &p, &p2, move, "Reached extraction (loss)");
+        printf("Player %c became inactive (reached extraction without all intel).\n", current->symbol);
+        current->active = 0;
+        logState(logfp, grid, n, &p, &p2, move, "Reached extraction (inactive)");
+        // do not move onto X; just end this turn
+        goto ADVANCE_TURN;
     }
-    break; // end game
 }
 
-   // move player
-    p.r = nr;
-    p.c = nc;
+    // move current player
+    current->r = nr;
+    current->c = nc;
     logState(logfp, grid, n, &p, &p2, move, "Valid move");
+
+ADVANCE_TURN:
+    // Auto-win check after turn resolution
+    if (p.active + p2.active == 1) {
+        Player *winner = p.active ? &p : &p2;
+        printf("Player %c wins (only active player remaining).\n", winner->symbol);
+        logState(logfp, grid, n, &p, &p2, '-', "Auto-win: only one active player");
+        break;
+    }
+
+    // Advance to next active player
+    currentIndex = 1 - currentIndex;
+    current = (currentIndex == 0) ? &p : &p2;
+    other   = (currentIndex == 0) ? &p2 : &p;
+    if (!current->active) {
+        // skip inactive player
+        currentIndex = 1 - currentIndex;
+        current = (currentIndex == 0) ? &p : &p2;
+        other   = (currentIndex == 0) ? &p2 : &p;
+    }
 }
 
  fclose(logfp);
