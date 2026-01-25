@@ -12,6 +12,7 @@
 #define EXTRACT 'X'
 #define PLAYER '@'
 #define PLAYER2 '&'
+#define PLAYER3 '$'
 #define WALL '#'
 #define INTEL 'I'
 #define LIFE 'L'
@@ -28,15 +29,19 @@ typedef struct {
 } Player;
  
 
-void logState(FILE *fp, char **grid, int n, Player *p1, Player *p2, char move, const char *note) {
+void logState(FILE *fp, char **grid, int n, Player *p1, Player *p2, Player *p3, int mode, char move, const char *note) {
     fprintf(fp, "Move: %c | %s\n", move, note);
-    fprintf(fp, "P1(%c) Lives: %d | Intel: %d | Pos: (%d,%d)\n", p1->symbol, p1->lives, p1->intel, p1->r, p1->c);
-    fprintf(fp, "P2(%c) Lives: %d | Intel: %d | Pos: (%d,%d)\n", p2->symbol, p2->lives, p2->intel, p2->r, p2->c);
+    fprintf(fp, "P1(%c) Lives: %d | Intel: %d | Pos: (%d,%d) | Active: %d\n", p1->symbol, p1->lives, p1->intel, p1->r, p1->c, p1->active);
+    fprintf(fp, "P2(%c) Lives: %d | Intel: %d | Pos: (%d,%d) | Active: %d\n", p2->symbol, p2->lives, p2->intel, p2->r, p2->c, p2->active);
+    if (mode == 3) {
+        fprintf(fp, "P3(%c) Lives: %d | Intel: %d | Pos: (%d,%d) | Active: %d\n", p3->symbol, p3->lives, p3->intel, p3->r, p3->c, p3->active);
+    }
 
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < n; j++) {
-            if (i == p1->r && j == p1->c) fputc(p1->symbol, fp);
-            else if (i == p2->r && j == p2->c) fputc(p2->symbol, fp);
+            if (i == p1->r && j == p1->c && p1->active) fputc(p1->symbol, fp);
+            else if (p2->active && i == p2->r && j == p2->c) fputc(p2->symbol, fp);
+            else if (mode == 3 && p3->active && i == p3->r && j == p3->c) fputc(p3->symbol, fp);
             else fputc(grid[i][j], fp);
             fputc(' ', fp);
         }
@@ -163,6 +168,31 @@ void loseLife(Player *p) {
     }
 }
 
+char getComputerMove(char **grid, int n, Player *current, Player *pA, Player *pB) {
+    const char moves[4] = {'W','A','S','D'};
+
+    for (int tries = 0; tries < 30; tries++) {
+        char mv = moves[rand() % 4];
+        int dr = 0, dc = 0;
+        if (mv == 'W') dr = -1;
+        else if (mv == 'S') dr = 1;
+        else if (mv == 'A') dc = -1;
+        else if (mv == 'D') dc = 1;
+
+        int nr = current->r + dr;
+        int nc = current->c + dc;
+
+        if (nr < 0 || nr >= n || nc < 0 || nc >= n) continue;
+        if (grid[nr][nc] == WALL) continue;
+        if (pA && pA->active && nr == pA->r && nc == pA->c) continue;
+        if (pB && pB->active && nr == pB->r && nc == pB->c) continue;
+
+        return mv;
+    }
+
+    return 'W';
+}
+
 
 
 
@@ -177,6 +207,25 @@ int main(){
     printf("\nEnter the grid size (5 <= N <= 15):  ");
     scanf("%d", &n);
 
+    int mode;
+    printf("\nSelect mode: 1) Single  2) Two-player  3) Three-player : ");
+    scanf("%d", &mode);
+    if (mode != 1 && mode != 2 && mode != 3) mode = 1;
+
+    int p2IsHuman = 1;
+    if (mode == 2) {
+        printf("Player 2 type: 1) Human  2) Computer : ");
+        scanf("%d", &p2IsHuman);
+        if (p2IsHuman != 1 && p2IsHuman != 2) p2IsHuman = 1;
+    }
+
+    int p3IsHuman = 1;
+    if (mode == 3) {
+        printf("Player 3 type: 1) Human  2) Computer : ");
+        scanf("%d", &p3IsHuman);
+        if (p3IsHuman != 1 && p3IsHuman != 2) p3IsHuman = 1;
+    }
+
 
     Player p;
    p.symbol = PLAYER;
@@ -189,8 +238,19 @@ int main(){
     p2.symbol = PLAYER2;
     p2.lives = 3;
     p2.intel = 0;
-    p2.active = 1;
-    p2.isHuman = 1;
+    p2.active = (mode >= 2) ? 1 : 0;
+    p2.isHuman = (p2IsHuman == 1) ? 1 : 0;
+    p2.r = -1;
+    p2.c = -1;
+
+    Player p3;
+    p3.symbol = PLAYER3;
+    p3.lives = 3;
+    p3.intel = 0;
+    p3.active = (mode == 3) ? 1 : 0;
+    p3.isHuman = (p3IsHuman == 1) ? 1 : 0;
+    p3.r = -1;
+    p3.c = -1;
 
    
 
@@ -209,32 +269,59 @@ int main(){
    placeLives(grid, n);
    placeExtraction(grid, n);
    placePlayer(grid, n, &p.r, &p.c);
-    char saved = grid[p.r][p.c];
-    grid[p.r][p.c] = WALL;      // temporarily block P1 cell
-    placePlayer(grid, n, &p2.r, &p2.c);
-    grid[p.r][p.c] = saved;     // restore cell
+
+    if (mode >= 2) {
+        char saved1 = grid[p.r][p.c];
+        grid[p.r][p.c] = WALL;      // temporarily block P1 cell
+        placePlayer(grid, n, &p2.r, &p2.c);
+        grid[p.r][p.c] = saved1;    // restore cell
+    }
+
+    if (mode == 3) {
+        // Temporarily block P1 and P2 cells so P3 can't spawn on them
+        char saved1 = grid[p.r][p.c];
+        char saved2 = grid[p2.r][p2.c];
+        grid[p.r][p.c] = WALL;
+        grid[p2.r][p2.c] = WALL;
+        placePlayer(grid, n, &p3.r, &p3.c);
+        grid[p.r][p.c] = saved1;
+        grid[p2.r][p2.c] = saved2;
+    }
 
    // Turn system helpers
 
-   logState(logfp, grid, n, &p, &p2, '-', "Initial state");
+   logState(logfp, grid, n, &p, &p2, &p3, mode, '-', "Initial state");
     
-    int currentIndex = 0; // 0 => p (@), 1 => p2 (&)
-    Player *current = &p;
-    Player *other = &p2;
+    int currentIndex = 0; // 0 => p (@), 1 => p2 (&), 2 => p3 ($)
+    Player *players[3] = { &p, &p2, &p3 };
 
     while (1) {
+    Player *current = players[currentIndex];
+
+    // Skip inactive players automatically (mode 2: 0..1, mode 3: 0..2)
+    int maxPlayers = (mode == 3) ? 3 : 2;
+    int guard = 0;
+    while (!current->active && guard < maxPlayers) {
+        currentIndex = (currentIndex + 1) % maxPlayers;
+        current = players[currentIndex];
+        guard++;
+    }
 
     printf("\nTurn: Player %c\n", current->symbol);
     printf("P1(%c) Lives: %d | Intel: %d | Active: %d\n", p.symbol, p.lives, p.intel, p.active);
     printf("P2(%c) Lives: %d | Intel: %d | Active: %d\n", p2.symbol, p2.lives, p2.intel, p2.active);
+    if (mode == 3) {
+        printf("P3(%c) Lives: %d | Intel: %d | Active: %d\n", p3.symbol, p3.lives, p3.intel, p3.active);
+    }
 
     for (int j = 0; j < n; j++) printf(" __");
     printf("\n");
 
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < n; j++) {
-            if (i == p.r && j == p.c) printf("|%c ", p.symbol);
-            else if (i == p2.r && j == p2.c) printf("|%c ", p2.symbol);
+            if (p.active && i == p.r && j == p.c) printf("|%c ", p.symbol);
+            else if (p2.active && i == p2.r && j == p2.c) printf("|%c ", p2.symbol);
+            else if (mode == 3 && p3.active && i == p3.r && j == p3.c) printf("|%c ", p3.symbol);
             else printf("|%c ", grid[i][j]);
         }
         printf("|\n");
@@ -244,36 +331,65 @@ int main(){
     }
 
     char move;
-    printf("\nMove (W/A/S/D) or Q to quit: ");
-    scanf(" %c", &move);
-    move = toupper((unsigned char)move);
-
-    if (move == 'Q') {
-        printf("Player %c quit and became inactive.\n", current->symbol);
-        current->active = 0;
-        logState(logfp, grid, n, &p, &p2, move, "Quit (current player inactive)");
+    if (current->isHuman) {
+        printf("\nMove (W/A/S/D) or Q to quit: ");
+        scanf(" %c", &move);
+        move = toupper((unsigned char)move);
+    } else {
+        // Pass other active players (up to two) to avoid collisions
+        Player *o1 = NULL;
+        Player *o2 = NULL;
+        int idx = 0;
+        for (int k = 0; k < ((mode == 3) ? 3 : 2); k++) {
+            if (k == currentIndex) continue;
+            if (idx == 0) o1 = players[k];
+            else o2 = players[k];
+            idx++;
+        }
+        move = getComputerMove(grid, n, current, o1, o2);
+        printf("\nComputer (Player %c) chose move: %c\n", current->symbol, move);
     }
 
-    // Auto-win if only one active player remains
-    if (p.active + p2.active == 1) {
-        Player *winner = p.active ? &p : &p2;
-        printf("Player %c wins (only active player remaining).\n", winner->symbol);
-        logState(logfp, grid, n, &p, &p2, '-', "Auto-win: only one active player");
-        break;
+    if (move == 'Q') {
+        if (!current->isHuman) {
+            // Computer should not quit; treat as invalid key
+            loseLife(current);
+            logState(logfp, grid, n, &p, &p2, &p3, mode, move, "Computer attempted quit (penalized)");
+            goto ADVANCE_TURN;
+        }
+        printf("Player %c quit and became inactive.\n", current->symbol);
+        current->active = 0;
+        logState(logfp, grid, n, &p, &p2, &p3, mode, move, "Quit (current player inactive)");
+        if (mode == 1) {
+            break;
+        }
+    }
+
+    if (mode == 2 || mode == 3) {
+        int activeCount = p.active + p2.active + (mode == 3 ? p3.active : 0);
+        if (activeCount == 1) {
+            Player *winner = p.active ? &p : (p2.active ? &p2 : &p3);
+            printf("Player %c wins (only active player remaining).\n", winner->symbol);
+            logState(logfp, grid, n, &p, &p2, &p3, mode, '-', "Auto-win: only one active player");
+            break;
+        }
     }
 
     // If current player became inactive (e.g., quit), advance turn
     if (!current->active) {
-        currentIndex = 1 - currentIndex;
-        current = (currentIndex == 0) ? &p : &p2;
-        other   = (currentIndex == 0) ? &p2 : &p;
+        if (mode == 1) {
+            break;
+        }
         continue;
     }
 
     int dr, dc;
     if (!getMoveDelta(move, &dr, &dc)) {
         loseLife(current);
-        logState(logfp, grid, n, &p, &p2, move, "Invalid key");
+        logState(logfp, grid, n, &p, &p2, &p3, mode, move, "Invalid key");
+        if (mode == 1 && !current->active) {
+            break;
+        }
         if (!current->active) {
             // inactive due to lives reaching 0
         }
@@ -286,20 +402,34 @@ int main(){
 
     if (nr < 0 || nr >= n || nc < 0 || nc >= n) {
         loseLife(current);
-        logState(logfp, grid, n, &p, &p2, move, "Outside grid");
+        logState(logfp, grid, n, &p, &p2, &p3, mode, move, "Outside grid");
+        if (mode == 1 && !current->active) {
+            break;
+        }
         goto ADVANCE_TURN;
     }
 
     if (grid[nr][nc] == WALL) {
         loseLife(current);
-        logState(logfp, grid, n, &p, &p2, move, "Hit Wall");
+        logState(logfp, grid, n, &p, &p2, &p3, mode, move, "Hit Wall");
+        if (mode == 1 && !current->active) {
+            break;
+        }
         goto ADVANCE_TURN;
     }
 
-    if (nr == other->r && nc == other->c && other->active) {
-        loseLife(current);
-        logState(logfp, grid, n, &p, &p2, move, "Tried to move onto other player");
-        goto ADVANCE_TURN;
+    // cannot move onto another active player
+    int maxPlayers2 = (mode == 3) ? 3 : 2;
+    for (int k = 0; k < maxPlayers2; k++) {
+        if (k == currentIndex) continue;
+        if (players[k]->active && nr == players[k]->r && nc == players[k]->c) {
+            loseLife(current);
+            logState(logfp, grid, n, &p, &p2, &p3, mode, move, "Tried to move onto another player");
+            if (mode == 1 && !current->active) {
+                break;
+            }
+            goto ADVANCE_TURN;
+        }
     }
 
     // valid move: check what is on the target cell
@@ -318,13 +448,16 @@ else if (grid[nr][nc] == LIFE) {
 if (grid[nr][nc] == EXTRACT) {
     if (current->intel == 3) {
         printf("Player %c wins by extracting with all intel.\n", current->symbol);
-        logState(logfp, grid, n, &p, &p2, move, "Reached extraction (win)");
+        logState(logfp, grid, n, &p, &p2, &p3, mode, move, "Reached extraction (win)");
         break;
     } else {
         printf("Player %c became inactive (reached extraction without all intel).\n", current->symbol);
         current->active = 0;
-        logState(logfp, grid, n, &p, &p2, move, "Reached extraction (inactive)");
+        logState(logfp, grid, n, &p, &p2, &p3, mode, move, "Reached extraction (inactive)");
         // do not move onto X; just end this turn
+        if (mode == 1) {
+            break;
+        }
         goto ADVANCE_TURN;
     }
 }
@@ -332,26 +465,30 @@ if (grid[nr][nc] == EXTRACT) {
     // move current player
     current->r = nr;
     current->c = nc;
-    logState(logfp, grid, n, &p, &p2, move, "Valid move");
+    logState(logfp, grid, n, &p, &p2, &p3, mode, move, "Valid move");
 
 ADVANCE_TURN:
-    // Auto-win check after turn resolution
-    if (p.active + p2.active == 1) {
-        Player *winner = p.active ? &p : &p2;
-        printf("Player %c wins (only active player remaining).\n", winner->symbol);
-        logState(logfp, grid, n, &p, &p2, '-', "Auto-win: only one active player");
-        break;
+    if (mode == 2 || mode == 3) {
+        int activeCount = p.active + p2.active + (mode == 3 ? p3.active : 0);
+        if (activeCount == 1) {
+            Player *winner = p.active ? &p : (p2.active ? &p2 : &p3);
+            printf("Player %c wins (only active player remaining).\n", winner->symbol);
+            logState(logfp, grid, n, &p, &p2, &p3, mode, '-', "Auto-win: only one active player");
+            break;
+        }
     }
 
     // Advance to next active player
-    currentIndex = 1 - currentIndex;
-    current = (currentIndex == 0) ? &p : &p2;
-    other   = (currentIndex == 0) ? &p2 : &p;
-    if (!current->active) {
-        // skip inactive player
-        currentIndex = 1 - currentIndex;
-        current = (currentIndex == 0) ? &p : &p2;
-        other   = (currentIndex == 0) ? &p2 : &p;
+    if (mode == 2) {
+        currentIndex = (currentIndex + 1) % 2;
+        if (!players[currentIndex]->active) currentIndex = (currentIndex + 1) % 2;
+    } else if (mode == 3) {
+        currentIndex = (currentIndex + 1) % 3;
+        // skip inactive players (at most 2 skips needed)
+        for (int tries = 0; tries < 2; tries++) {
+            if (players[currentIndex]->active) break;
+            currentIndex = (currentIndex + 1) % 3;
+        }
     }
 }
 
