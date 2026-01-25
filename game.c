@@ -11,10 +11,39 @@
 #define EMPTY '.'
 #define EXTRACT 'X'
 #define PLAYER '@'
+#define PLAYER2 '&'
 #define WALL '#'
 #define INTEL 'I'
 #define LIFE 'L'
 
+
+
+typedef struct {
+    char symbol;     // '@'
+    int r, c;        // position
+    int lives;       // lives
+    int intel;       // intel collected
+    int active;      // 1 active, 0 inactive
+    int isHuman;     // 1 human, 0 computer (for later)
+} Player;
+ 
+
+void logState(FILE *fp, char **grid, int n, Player *p1, Player *p2, char move, const char *note) {
+    fprintf(fp, "Move: %c | %s\n", move, note);
+    fprintf(fp, "P1(%c) Lives: %d | Intel: %d | Pos: (%d,%d)\n", p1->symbol, p1->lives, p1->intel, p1->r, p1->c);
+    fprintf(fp, "P2(%c) Lives: %d | Intel: %d | Pos: (%d,%d)\n", p2->symbol, p2->lives, p2->intel, p2->r, p2->c);
+
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            if (i == p1->r && j == p1->c) fputc(p1->symbol, fp);
+            else if (i == p2->r && j == p2->c) fputc(p2->symbol, fp);
+            else fputc(grid[i][j], fp);
+            fputc(' ', fp);
+        }
+        fputc('\n', fp);
+    }
+    fprintf(fp, "----------------------------\n");
+}
 
 
 
@@ -134,33 +163,6 @@ void loseLife(int *lives) {
 
 
 
-void logState(FILE *fp, char **grid, int n, int pr, int pc, int lives, int intel, char move, const char *note) {
-    fprintf(fp, "Move: %c | %s\n", move, note);
-    fprintf(fp, "Lives: %d | Intel: %d\n", lives, intel);
-
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n; j++) {
-            if (i == pr && j == pc) fputc(PLAYER, fp);
-            else fputc(grid[i][j], fp);
-            fputc(' ', fp);
-        }
-        fputc('\n', fp);
-    }
-    fprintf(fp, "----------------------------\n");
-}
-
-
-
-typedef struct {
-    char symbol;     // '@'
-    int r, c;        // position
-    int lives;       // lives
-    int intel;       // intel collected
-    int active;      // 1 active, 0 inactive
-    int isHuman;     // 1 human, 0 computer (for later)
-} Player;
- 
-
 int main(){
 
     srand(time(NULL));
@@ -179,6 +181,13 @@ int main(){
    p.active = 1;
    p.isHuman = 1;
 
+    Player p2;
+    p2.symbol = PLAYER2;
+    p2.lives = 3;
+    p2.intel = 0;
+    p2.active = 1;
+    p2.isHuman = 1;
+
    
 
    char **grid = allocGrid(n);
@@ -196,11 +205,15 @@ int main(){
    placeLives(grid, n);
    placeExtraction(grid, n);
    placePlayer(grid, n, &p.r, &p.c);
+    char saved = grid[p.r][p.c];
+    grid[p.r][p.c] = WALL;      // temporarily block P1 cell
+    placePlayer(grid, n, &p2.r, &p2.c);
+    grid[p.r][p.c] = saved;     // restore cell
 
    int lives = 3;
    int intel = 0;
 
-   logState(logfp, grid, n, p.r, p.c, p.lives, p.intel, '-', "Initial state");
+   logState(logfp, grid, n, &p, &p2, '-', "Initial state");
     
     while (1) {
 
@@ -211,7 +224,8 @@ int main(){
 
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < n; j++) {
-            if (i == p.r && j == p.c) printf("|%c ", PLAYER);
+            if (i == p.r && j == p.c) printf("|%c ", p.symbol);
+            else if (i == p2.r && j == p2.c) printf("|%c ", p2.symbol);
             else printf("|%c ", grid[i][j]);
         }
         printf("|\n");
@@ -228,7 +242,7 @@ int main(){
     if (move == 'Q') {
         printf("You quit.\n");
        
-        logState(logfp, grid, n, p.r, p.c, p.lives, p.intel, move, "Quit");
+        logState(logfp, grid, n, &p, &p2, move, "Quit");
         break;
     }
 
@@ -238,7 +252,7 @@ int main(){
         if (lives <= 0) { printf("Game Over! Lives reached 0.\n");
             
             
-        logState(logfp, grid, n, p.r, p.c, p.lives, p.intel, move, "Invalid key");
+        logState(logfp, grid, n, &p, &p2, move, "Invalid key");
 
             break; }
         continue;
@@ -251,7 +265,7 @@ int main(){
         loseLife(&lives);
         if (lives <= 0) { printf("Game Over! Lives reached 0.\n"); 
             
-            logState(logfp, grid, n, p.r, p.c, p.lives, p.intel, move, "Outside grid");
+            logState(logfp, grid, n, &p, &p2, move, "Outside grid");
             break; }
         continue;
     }
@@ -260,7 +274,7 @@ int main(){
         loseLife(&lives);
         if (lives <= 0) { printf("Game Over! Lives reached 0.\n");
             
-            logState(logfp, grid, n, p.r, p.c, p.lives, p.intel, move, "Hit Wall");
+            logState(logfp, grid, n, &p, &p2, move, "Hit Wall");
             break; }
         continue;
     }
@@ -282,11 +296,11 @@ if (grid[nr][nc] == EXTRACT) {
     if (intel == 3) {
         printf("YOU WIN! Extracted with all intel.\n");
 
-        logState(logfp, grid, n, p.r, p.c, p.lives, p.intel, move, "Reached extraction (win)");
+        logState(logfp, grid, n, &p, &p2, move, "Reached extraction (win)");
     } else {
         printf("YOU LOST! Reached extraction without all intel.\n");
 
-        logState(logfp, grid, n, p.r, p.c, p.lives, p.intel, move, "Reached extraction (loss)");
+        logState(logfp, grid, n, &p, &p2, move, "Reached extraction (loss)");
     }
     break; // end game
 }
@@ -294,7 +308,7 @@ if (grid[nr][nc] == EXTRACT) {
    // move player
     p.r = nr;
     p.c = nc;
-    logState(logfp, grid, n, p.r, p.c, p.lives, p.intel, move, "Valid move");
+    logState(logfp, grid, n, &p, &p2, move, "Valid move");
 }
 
  fclose(logfp);
