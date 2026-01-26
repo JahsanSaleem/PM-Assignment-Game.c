@@ -1,24 +1,26 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
+#include <time.h>       //required header files
 #include <ctype.h>
 #include <string.h>
 
-#define MIN_N 5
+#define MIN_N 5         //allowed grid size
 #define MAX_N 15
-#define EMPTY '.'
+
+#define EMPTY '.'       //items placed in grid 
 #define EXTRACT 'X'
-#define PLAYER '@'
-#define PLAYER2 '&'
-#define PLAYER3 '$'
 #define WALL '#'
 #define INTEL 'I'
 #define LIFE 'L'
 
+#define PLAYER '@'       //players symbols
+#define PLAYER2 '&'
+#define PLAYER3 '$'
+
 typedef struct {
-    char symbol;
+    char symbol;         
     int r, c;
-    int lives;
+    int lives;        //Represents one player’s state
     int intel;
     int active;
     int isHuman;
@@ -65,7 +67,7 @@ void logState(FILE *fp, char **grid, int n,
 
 
 char **allocGrid(int n) {
-    char **g = (char **)malloc(n * sizeof(char *));
+    char **g = (char **)malloc(n * sizeof(char *));         //this function allocates grid dynamically
     if (g == NULL) return NULL;
 
     for (int i = 0; i < n; i++) {
@@ -79,20 +81,20 @@ char **allocGrid(int n) {
    return g;
 }
 void freeGrid(char **g, int n) {
-    for (int i = 0; i < n; i++) free(g[i]);
+    for (int i = 0; i < n; i++) free(g[i]);              
     free(g);
 }
 
 void fillGrid(char **g, int n, char ch) {
     for (int i = 0; i < n; i++)
-        for (int j = 0; j < n; j++)
+        for (int j = 0; j < n; j++)                    
             g[i][j] = ch;
       
 }
 
 
 void placeExtraction(char **g, int n) {
-    int r, c;
+    int r, c;                                     // this function randomly placing extraction 'X' on grid
     do {
         r = rand() % n;
         c = rand() % n;
@@ -105,7 +107,7 @@ void placePlayer(char **g, int n, int *pr, int *pc) {
     int r, c;
     do {
         r = rand() % n;
-        c = rand() % n;
+        c = rand() % n;                              //this function randomly placing player on grid
     } while (g[r][c] != EMPTY);
 
     *pr = r;
@@ -114,7 +116,7 @@ void placePlayer(char **g, int n, int *pr, int *pc) {
 
 void placeWalls(char **g, int n) {
     int wallCount = (n * n) / 7;   // ~15% of the grid
-    if (wallCount < 5) wallCount = 5;
+    if (wallCount < 5) wallCount = 5;                        //this function randomly placing walls '#' on grid
 
     int placed = 0;
     while (placed < wallCount) {
@@ -131,7 +133,7 @@ void placeWalls(char **g, int n) {
 void placeIntel(char **g, int n) {
     int placed = 0;
 
-    while (placed < 3) {
+    while (placed < 3) {              //this function randomly placing intels 'I' on grid
         int r = rand() % n;
         int c = rand() % n;
 
@@ -146,7 +148,7 @@ void placeLives(char **g, int n) {
     int placed = 0;
 
     while (placed < 2) {
-        int r = rand() % n;
+        int r = rand() % n;            //this function randomly placing lives 'L' on grid
         int c = rand() % n;
 
         if (g[r][c] == EMPTY) {
@@ -156,8 +158,8 @@ void placeLives(char **g, int n) {
     }
 }
 
-int getMoveDelta(char move, int *dr, int *dc) {
-    *dr = 0;
+int getMoveDelta(char move, int *dr, int *dc) {        //this function for controlling moves on grid 
+    *dr = 0;                                          // using W A S D keys
     *dc = 0;
 
     if (move == 'W') { *dr = -1; return 1; }
@@ -168,7 +170,7 @@ int getMoveDelta(char move, int *dr, int *dc) {
     return 0;
 }
 
-void loseLife(Player *p) {
+void loseLife(Player *p) {                   // prompting messsage after invalid moves
     p->lives--;
     printf("Invalid move! Lives -1 (Lives now: %d)\n", p->lives);
     if (p->lives <= 0) {
@@ -217,13 +219,13 @@ int main(){
     }
 
     int mode;
-    printf("\nSelect mode: 1) Single  2) Two-player  3) Three-player : ");
-    scanf("%d", &mode);
+    printf("\nSelect mode: 1) Single  2) Two-player  3) Three-player : ");   //asking user for player mode 
+    scanf("%d", &mode);                                                      //single or dual or three 
     if (mode != 1 && mode != 2 && mode != 3) mode = 1;
 
     int p2IsHuman = 1;
     if (mode == 2 || mode == 3) {
-        printf("Player 2 type: 1) Human  2) Computer : ");
+        printf("Player 2 type: 1) Human  2) Computer : ");         //asking user for Human or Computer for mode 2
         scanf("%d", &p2IsHuman);
         if (p2IsHuman != 1 && p2IsHuman != 2) p2IsHuman = 1;
     }
@@ -237,7 +239,7 @@ int main(){
 
 
     Player p;
-   p.symbol = PLAYER;
+   p.symbol = PLAYER;              //declaring player 1 status through struct 
    p.lives = 3;
    p.intel = 0;
    p.active = 1;
@@ -246,14 +248,14 @@ int main(){
     Player p2;
     p2.symbol = PLAYER2;
     p2.lives = 3;
-    p2.intel = 0;
+    p2.intel = 0;                               //declaring player 2 status through struct 
     p2.active = (mode >= 2) ? 1 : 0;
     p2.isHuman = (p2IsHuman == 1) ? 1 : 0;
     p2.r = -1;
     p2.c = -1;
 
     Player p3;
-    p3.symbol = PLAYER3;
+    p3.symbol = PLAYER3;                          //declaring player three status through struct 
     p3.lives = 3;
     p3.intel = 0;
     p3.active = (mode == 3) ? 1 : 0;
@@ -262,21 +264,21 @@ int main(){
     p3.c = -1;
 
    
-   char **grid = allocGrid(n);                             // dynamic 2D grid (N chosen at runtime)
+   char **grid = allocGrid(n);                          
 
     if (grid == NULL) {
         printf("Memory allocation failed.\n");
         return 1;
     }
 
-   FILE *logfp = fopen("spynet_log1.txt", "w");                  // log game state after each move
+   FILE *logfp = fopen("spynet_log1.txt", "w");              // log game state after each move
   if (logfp == NULL) {
     printf("Could not open log file.\n");
     freeGrid(grid, n);
     return 1;
 }
    
-   fillGrid(grid, n, EMPTY);
+   fillGrid(grid, n, EMPTY);        //calling functions by order
    placeWalls(grid, n);
    placeIntel(grid, n);
    placeLives(grid, n);
@@ -339,9 +341,9 @@ int main(){
 
     char move;
     if (current->isHuman) {
-        printf("\nMove (W/A/S/D) or Q to quit: ");
-        scanf(" %c", &move);                                             // space before %c skips whitespace/newlines
-        move = toupper((unsigned char)move);
+        printf("\nMove (W/A/S/D) or Q to quit: ");            //giving control instructions to user
+        scanf(" %c", &move);                                  // space before %c skips whitespace/newlines
+        move = toupper((unsigned char)move);                  //making user inpur in Uppercase for better formatting
     } else {
         Player *o1 = NULL;
         Player *o2 = NULL;
@@ -352,7 +354,7 @@ int main(){
             else o2 = players[k];
             idx++;
         }
-        move = getComputerMove(grid, n, current, o1, o2);
+        move = getComputerMove(grid, n, current, o1, o2);      //calling function 
         printf("\nComputer (Player %c) chose move: %c\n", current->symbol, move);
     }
 

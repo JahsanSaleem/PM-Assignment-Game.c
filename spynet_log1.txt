@@ -1,100 +1,110 @@
+
+=============================
 Move: - | Initial state
-P1(@) Lives: 3 | Intel: 0 | Pos: (5,5)
-P2(&) Lives: 3 | Intel: 0 | Pos: (5,4)
-. . . X . # 
-I . L . . . 
-. # . . # . 
-. . # . . . 
-. # I . . . 
-. . I L & @ 
-----------------------------
+P1(@) | Lives=3 | Intel=0 | Pos=(5,5) | Active=1
+Grid:
+..##..
+I.L.#.
+..I...
+X#....
+.#....
+L.I..@
+
+=============================
 Move: W | Valid move
-P1(@) Lives: 3 | Intel: 0 | Pos: (4,5)
-P2(&) Lives: 3 | Intel: 0 | Pos: (5,4)
-. . . X . # 
-I . L . . . 
-. # . . # . 
-. . # . . . 
-. # I . . @ 
-. . I L & . 
-----------------------------
-Move: A | Valid move
-P1(@) Lives: 3 | Intel: 0 | Pos: (4,4)
-P2(&) Lives: 3 | Intel: 0 | Pos: (5,4)
-. . . X . # 
-I . L . . . 
-. # . . # . 
-. . # . . . 
-. # I . @ . 
-. . I L & . 
-----------------------------
-Move: D | Valid move
-P1(@) Lives: 3 | Intel: 0 | Pos: (4,5)
-P2(&) Lives: 3 | Intel: 0 | Pos: (5,4)
-. . . X . # 
-I . L . . . 
-. # . . # . 
-. . # . . . 
-. # I . . @ 
-. . I L & . 
-----------------------------
-Move: S | Valid move
-P1(@) Lives: 3 | Intel: 0 | Pos: (5,5)
-P2(&) Lives: 3 | Intel: 0 | Pos: (5,4)
-. . . X . # 
-I . L . . . 
-. # . . # . 
-. . # . . . 
-. # I . . . 
-. . I L & @ 
-----------------------------
+P1(@) | Lives=3 | Intel=0 | Pos=(4,5) | Active=1
+Grid:
+..##..
+I.L.#.
+..I...
+X#....
+.#...@
+L.I...
+
+=============================
 Move: W | Valid move
-P1(@) Lives: 3 | Intel: 0 | Pos: (4,5)
-P2(&) Lives: 3 | Intel: 0 | Pos: (5,4)
-. . . X . # 
-I . L . . . 
-. # . . # . 
-. . # . . . 
-. # I . . @ 
-. . I L & . 
-----------------------------
+P1(@) | Lives=3 | Intel=0 | Pos=(3,5) | Active=1
+Grid:
+..##..
+I.L.#.
+..I...
+X#...@
+.#....
+L.I...
+
+=============================
+Move: W | Valid move
+P1(@) | Lives=3 | Intel=0 | Pos=(2,5) | Active=1
+Grid:
+..##..
+I.L.#.
+..I..@
+X#....
+.#....
+L.I...
+
+=============================
+Move: W | Valid move
+P1(@) | Lives=3 | Intel=0 | Pos=(1,5) | Active=1
+Grid:
+..##..
+I.L.#@
+..I...
+X#....
+.#....
+L.I...
+
+=============================
+Move: W | Valid move
+P1(@) | Lives=3 | Intel=0 | Pos=(0,5) | Active=1
+Grid:
+..##.@
+I.L.#.
+..I...
+X#....
+.#....
+L.I...
+
+=============================
 Move: A | Valid move
-P1(@) Lives: 3 | Intel: 0 | Pos: (4,4)
-P2(&) Lives: 3 | Intel: 0 | Pos: (5,4)
-. . . X . # 
-I . L . . . 
-. # . . # . 
-. . # . . . 
-. # I . @ . 
-. . I L & . 
-----------------------------
-Move: A | Valid move
-P1(@) Lives: 3 | Intel: 0 | Pos: (4,3)
-P2(&) Lives: 3 | Intel: 0 | Pos: (5,4)
-. . . X . # 
-I . L . . . 
-. # . . # . 
-. . # . . . 
-. # I @ . . 
-. . I L & . 
-----------------------------
-Move: A | Valid move
-P1(@) Lives: 3 | Intel: 0 | Pos: (4,2)
-P2(&) Lives: 3 | Intel: 0 | Pos: (5,4)
-. . . X . # 
-I . L . . . 
-. # . . # . 
-. . # . . . 
-. # @ . . . 
-. . I L & . 
-----------------------------
-Move: A | Hit Wall
-P1(@) Lives: 3 | Intel: 0 | Pos: (4,2)
-P2(&) Lives: 3 | Intel: 0 | Pos: (5,4)
-. . . X . # 
-I . L . . . 
-. # . . # . 
-. . # . . . 
-. # @ . . . 
-. . I L & . 
-----------------------------
+P1(@) | Lives=3 | Intel=0 | Pos=(0,4) | Active=1
+Grid:
+..##@.
+I.L.#.
+..I...
+X#....
+.#....
+L.I...
+
+=============================
+Move: S | Hit Wall
+P1(@) | Lives=2 | Intel=0 | Pos=(0,4) | Active=1
+Grid:
+..##@.
+I.L.#.
+..I...
+X#....
+.#....
+L.I...
+
+=============================
+Move: S | Hit Wall
+P1(@) | Lives=1 | Intel=0 | Pos=(0,4) | Active=1
+Grid:
+..##@.
+I.L.#.
+..I...
+X#....
+.#....
+L.I...
+
+=============================
+Move: S | Hit Wall
+P1(@) | Lives=0 | Intel=0 | Pos=(0,4) | Active=0
+Grid:
+..##..
+I.L.#.
+..I...
+X#....
+.#....
+L.I...
