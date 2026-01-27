@@ -11,7 +11,7 @@
 
 #define EMPTY '.'       // empty cell
 #define EXTRACT 'X'     // extraction point
-#define WALL '#'        // wall/obstacle (blocks movement)
+#define WALL '#'        // wall(blocks movement)
 #define INTEL 'I'       // intel item (must collect 3 to win)
 #define LIFE 'L'        // life pack (adds +1 life)
 
@@ -117,7 +117,7 @@ void placePlayer(char **g, int n, int *pr, int *pc) {
         r = rand() % n;
         c = rand() % n;
                                // Choose a random empty starting position.
-                               // We return it via *pr and *pc (player symbol is drawn as an overlay, not stored in grid[][]).
+                               
     } while (g[r][c] != EMPTY);
 
     *pr = r;
@@ -195,6 +195,7 @@ void loseLife(Player *p) {
 }
 
 // Simple computer AI: tries random moves until it finds one that is valid (not wall/outside/onto another player).
+
 char getComputerMove(char **grid, int n, Player *current, Player *pA, Player *pB) {
     const char moves[4] = {'W','A','S','D'};
 
@@ -268,8 +269,13 @@ int main(){
     p2.symbol = PLAYER2;
     p2.lives = 3;
     p2.intel = 0;                               //declaring player 2 status through struct 
-    p2.active = (mode >= 2) ? 1 : 0;
-    p2.isHuman = (p2IsHuman == 1) ? 1 : 0;
+
+    if (mode >= 2) p2.active = 1;
+    else p2.active = 0;
+
+    if (p2IsHuman == 1) p2.isHuman = 1;
+    else p2.isHuman = 0;
+
     p2.r = -1;
     p2.c = -1;
 
@@ -277,8 +283,13 @@ int main(){
     p3.symbol = PLAYER3;                          //declaring player three status through struct 
     p3.lives = 3;
     p3.intel = 0;
-    p3.active = (mode == 3) ? 1 : 0;
-    p3.isHuman = (p3IsHuman == 1) ? 1 : 0; // 1=human, 0=computer
+
+    if (mode == 3) p3.active = 1;
+    else p3.active = 0;
+
+    if (p3IsHuman == 1) p3.isHuman = 1;  // 1=human
+    else p3.isHuman = 0;                 // 0=computer
+
     p3.r = -1;
     p3.c = -1;
 
@@ -295,7 +306,7 @@ int main(){
         freeGrid(grid, n);
         return 1;
     }
-    // Setup order matters: start empty, then add obstacles/items, then choose player start positions.
+    // Setup order matters: start empty, then add items, then choose player start positions.
     fillGrid(grid, n, EMPTY);
     placeWalls(grid, n);
     placeIntel(grid, n);
@@ -304,14 +315,18 @@ int main(){
     placePlayer(grid, n, &p.r, &p.c);
 
     if (mode >= 2) {
-        char saved1 = grid[p.r][p.c];
+        char saved1 = grid[p.r][p.c];                /* Place Player 2 on an EMPTY cell without overlapping Player 1.
+                                              We temporarily mark P1's position as a WALL so placePlayer() won't choose it,
+                                                     then restore the original cell value */
         grid[p.r][p.c] = WALL;
         placePlayer(grid, n, &p2.r, &p2.c);
         grid[p.r][p.c] = saved1;
     }
 
     if (mode == 3) {
-        char saved1 = grid[p.r][p.c];
+        char saved1 = grid[p.r][p.c];               // Place Player 3 on an EMPTY cell without overlapping Player 1 or Player 2.
+                                                 // We temporarily block both existing player positions, choose a free cell for P3,
+                                                  // then restore the original grid values.
         char saved2 = grid[p2.r][p2.c];
         grid[p.r][p.c] = WALL;
         grid[p2.r][p2.c] = WALL;
@@ -327,9 +342,15 @@ int main(){
 
     while (1) {
         Player *current = players[currentIndex];
-        // current points to the player whose turn it is
 
-        int maxPlayers = (mode == 3) ? 3 : (mode == 2 ? 2 : 1);
+        // Select the player whose turn it is using currentIndex.
+        // If that player is inactive (dead or quit), skip them and move to the next one.
+         // 'guard' prevents an infinite loop in case all players are inactive.
+
+        int maxPlayers;
+            if (mode == 3) maxPlayers = 3;
+                else if (mode == 2) maxPlayers = 2;
+                else maxPlayers = 1;
         int guard = 0;
         // Skip inactive players so they do not get turns
         while (!current->active && guard < maxPlayers) {
@@ -382,7 +403,7 @@ int main(){
         int endTurn = 0;   // set to 1 when this player's turn should stop
         int endGame = 0;   // set to 1 when the whole game should stop
 
-        // Process one turn. Using do/while(0) lets us "break" out early without goto.
+        // Process one turn. Using do/while(0) lets us "break" 
         do {
             // Handle quitting: human can quit (becomes inactive). Computer is penalized if it "quits".
             if (move == 'Q') {
@@ -432,17 +453,23 @@ int main(){
                 break;
             }
 
-            int dr, dc;
-            if (!getMoveDelta(move, &dr, &dc)) {
-                loseLife(current);
-                logState(logfp, grid, n, &p, &p2, &p3, mode, move, "Invalid key");
-                if (mode == 1 && !current->active) endGame = 1;
-                endTurn = 1;
-                break;
+            // Convert the input move into direction changes (dr, dc).
+            // If the key is not one of W/A/S/D, it's an invalid move -> lose 1 life, log it, and end this turn.
+
+              int dr, dc;
+             if (!getMoveDelta(move, &dr, &dc)) {
+               loseLife(current);
+             logState(logfp, grid, n, &p, &p2, &p3, mode, move, "Invalid key");
+
+                // In single-player, if the player loses their last life, the game ends.
+             if (mode == 1 && !current->active) endGame = 1;
+
+                    endTurn = 1;   // stop processing this turn after the penalty
+                    break;         // exit the do{...}while(0) turn-processing block
             }
 
-            int nr = current->r + dr;
-            int nc = current->c + dc;
+            int nr = current->r + dr;  // Compute the new row and column the player wants to move to
+            int nc = current->c + dc;   // (current position + direction offsets)
 
             if (nr < 0 || nr >= n || nc < 0 || nc >= n) {
                 loseLife(current);
@@ -452,6 +479,7 @@ int main(){
                 break;
             }
 
+            // Wall collision: cannot move onto a wall cell
             if (grid[nr][nc] == WALL) {
                 loseLife(current);
                 logState(logfp, grid, n, &p, &p2, &p3, mode, move, "Hit Wall");
@@ -460,7 +488,11 @@ int main(){
                 break;
             }
 
-            int maxPlayers2 = (mode == 3) ? 3 : (mode == 2 ? 2 : 1);
+            int maxPlayers2;
+                if (mode == 3) maxPlayers2 = 3;
+                    else if (mode == 2) maxPlayers2 = 2;
+                else maxPlayers2 = 1;
+                
             // Prevent moving onto another active player's cell (collision)
             for (int k = 0; k < maxPlayers2; k++) {
                 if (k == currentIndex) continue;
