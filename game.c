@@ -117,7 +117,7 @@ void placePlayer(char **g, int n, int *pr, int *pc) {
         r = rand() % n;
         c = rand() % n;
                                // Choose a random empty starting position.
-                               
+                               // We return it via *pr and *pc (player symbol is drawn as an overlay, not stored in grid[][]).
     } while (g[r][c] != EMPTY);
 
     *pr = r;
@@ -195,7 +195,6 @@ void loseLife(Player *p) {
 }
 
 // Simple computer AI: tries random moves until it finds one that is valid (not wall/outside/onto another player).
-
 char getComputerMove(char **grid, int n, Player *current, Player *pA, Player *pB) {
     const char moves[4] = {'W','A','S','D'};
 
@@ -382,23 +381,32 @@ int main(){
         }
 
         char move;
-        if (current->isHuman) {
-            printf("\nMove (W/A/S/D) or Q to quit: ");            //giving control instructions to user
-            scanf(" %c", &move);                                  // space before %c skips whitespace/newlines
-            move = toupper((unsigned char)move);                  //making user inpur in Uppercase for better formatting
-        } else {
-            Player *o1 = NULL;
-            Player *o2 = NULL;
-            int idx = 0;
-            for (int k = 0; k < maxPlayers; k++) {
-                if (k == currentIndex) continue;
-                if (idx == 0) o1 = players[k];
-                else o2 = players[k];
-                idx++;
-            }
-            move = getComputerMove(grid, n, current, o1, o2);      //calling function 
-            printf("\nComputer (Player %c) chose move: %c\n", current->symbol, move);
-        }
+
+if (current->isHuman) {
+    // Human player: read a move from the keyboard and normalize to uppercase
+    printf("\nMove (W/A/S/D) or Q to quit: ");
+    scanf(" %c", &move);                       // leading space skips newline/whitespace
+    move = toupper((unsigned char)move);
+
+} else {
+    // Computer player: choose a move automatically.
+    // We first collect pointers to the OTHER players (opponents) so the AI can avoid collisions.
+    Player *o1 = NULL;                         // first opponent (if exists)
+    Player *o2 = NULL;                         // second opponent (only in 3-player mode)
+    int idx = 0;
+
+    for (int k = 0; k < maxPlayers; k++) {
+        if (k == currentIndex) continue;       // skip the current player (don't compare with self)
+
+        if (idx == 0) o1 = players[k];         // store first other player
+        else o2 = players[k];                  // store second other player (if any)
+        idx++;
+    }
+
+    // AI picks a random valid move that does not hit walls, go outside, or move onto an active opponent.
+    move = getComputerMove(grid, n, current, o1, o2);
+    printf("\nComputer (Player %c) chose move: %c\n", current->symbol, move);
+}
 
         int endTurn = 0;   // set to 1 when this player's turn should stop
         int endGame = 0;   // set to 1 when the whole game should stop
@@ -566,17 +574,24 @@ int main(){
             }
         }
 
-        // Rotate turn order (mode 2 toggles 0<->1, mode 3 cycles 0->1->2), skipping inactive players
-        if (mode == 2) {
-            currentIndex = (currentIndex + 1) % 2;
-            if (!players[currentIndex]->active) currentIndex = (currentIndex + 1) % 2;
-        } else if (mode == 3) {
-            currentIndex = (currentIndex + 1) % 3;
-            for (int tries = 0; tries < 2; tries++) {
-                if (players[currentIndex]->active) break;
-                currentIndex = (currentIndex + 1) % 3;
-            }
-        }
+       // Rotate to the next player's turn after finishing the current turn.
+      // In mode 2: toggle between player index 0 and 1, skipping an inactive player.
+       // In mode 3: move to the next index (0->1->2->0) and skip inactive players.
+    // 'tries < 2' is enough because in 3-player mode there are only two other players to check.
+      if (mode == 2) {
+    currentIndex = (currentIndex + 1) % 2;                 // switch to the other player (0<->1)
+    if (!players[currentIndex]->active)                    // if they are inactive, skip back to the active one
+        currentIndex = (currentIndex + 1) % 2;
+
+}      else if (mode == 3) {
+    currentIndex = (currentIndex + 1) % 3;                 // move to next player (cycle 0->1->2->0)
+
+    // Skip inactive players: check at most two times (only two other players exist)
+    for (int tries = 0; tries < 2; tries++) {
+        if (players[currentIndex]->active) break;          // found an active player
+        currentIndex = (currentIndex + 1) % 3;             // otherwise keep rotating
+    }
+}
     }
 
     fclose(logfp);
