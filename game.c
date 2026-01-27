@@ -358,6 +358,13 @@ int main(){
             guard++;
         }
 
+        // If we rotated through all players and none are active, end the game (prevents infinite loop)
+        if (!current->active) {
+            printf("\nNo active players remaining. Game over.\n");
+            logState(logfp, grid, n, &p, &p2, &p3, mode, '-', "Game over: no active players");
+            break;
+        }
+
         printf("\nTurn: Player %c\n", current->symbol);
         printf("P1(%c) Lives: %d | Intel: %d | Active: %d\n", p.symbol, p.lives, p.intel, p.active);
         if (mode >= 2) printf("P2(%c) Lives: %d | Intel: %d | Active: %d\n", p2.symbol, p2.lives, p2.intel, p2.active);
@@ -438,6 +445,13 @@ if (current->isHuman) {
                 int activeCount = p.active;
                 if (mode >= 2) activeCount += p2.active;
                 if (mode == 3) activeCount += p3.active;
+
+                if (activeCount == 0) {
+                    printf("No active players remaining. Game over.\n");
+                    logState(logfp, grid, n, &p, &p2, &p3, mode, '-', "Game over: no active players");
+                    endGame = 1;
+                    break;
+                }
 
                 if (activeCount == 1) {
                     Player *winner = NULL;
@@ -559,6 +573,12 @@ if (current->isHuman) {
             int activeCount = p.active;
             if (mode >= 2) activeCount += p2.active;
             if (mode == 3) activeCount += p3.active;
+
+            if (activeCount == 0) {
+                printf("No active players remaining. Game over.\n");
+                logState(logfp, grid, n, &p, &p2, &p3, mode, '-', "Game over: no active players");
+                break;
+            }
 
             if (activeCount == 1) {
                 Player *winner = NULL;
